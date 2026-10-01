@@ -24,32 +24,54 @@ export default function TradingChart({ symbol }: TradingChartProps) {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { color: '#0b0e11' },
-        textColor: '#848e9c',
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: '#1e2530' },
-        horzLines: { color: '#1e2530' },
-      },
-      crosshair: {
-        vertLine: { color: '#f0b90b', width: 1, style: 2, labelBackgroundColor: '#f0b90b' },
-        horzLine: { color: '#f0b90b', width: 1, style: 2, labelBackgroundColor: '#f0b90b' },
-      },
-      rightPriceScale: {
-        borderColor: '#2a3040',
-        scaleMargins: { top: 0.1, bottom: 0.25 },
-      },
-      timeScale: {
-        borderColor: '#2a3040',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
-    });
+    // Wait for container to have dimensions
+    const checkDimensions = () => {
+      if (!chartContainerRef.current) return null;
+      const width = chartContainerRef.current.clientWidth;
+      const height = chartContainerRef.current.clientHeight;
+      if (width === 0 || height === 0) return null;
+      return { width, height };
+    };
+
+    const dims = checkDimensions();
+    if (!dims) {
+      // Retry after a short delay
+      const timeout = setTimeout(() => {
+        if (chartContainerRef.current) {
+          // Force re-render by updating state
+          setTimeframe(prev => prev);
+        }
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+
+    try {
+      const chart = createChart(chartContainerRef.current, {
+        layout: {
+          background: { color: '#0b0e11' },
+          textColor: '#848e9c',
+          fontSize: 11,
+        },
+        grid: {
+          vertLines: { color: '#1e2530' },
+          horzLines: { color: '#1e2530' },
+        },
+        crosshair: {
+          vertLine: { color: '#f0b90b', width: 1, style: 2, labelBackgroundColor: '#f0b90b' },
+          horzLine: { color: '#f0b90b', width: 1, style: 2, labelBackgroundColor: '#f0b90b' },
+        },
+        rightPriceScale: {
+          borderColor: '#2a3040',
+          scaleMargins: { top: 0.1, bottom: 0.25 },
+        },
+        timeScale: {
+          borderColor: '#2a3040',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        width: dims.width,
+        height: dims.height,
+      });
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#0ecb81',
@@ -92,21 +114,25 @@ export default function TradingChart({ symbol }: TradingChartProps) {
     volumeSeries.setData(volumeData);
     chart.timeScale().fitContent();
 
-    // Resize handler
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        chart.applyOptions({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
-      }
-    });
-    resizeObserver.observe(chartContainerRef.current);
+      // Resize handler
+      const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          chart.applyOptions({
+            width: entry.contentRect.width,
+            height: entry.contentRect.height,
+          });
+        }
+      });
+      resizeObserver.observe(chartContainerRef.current);
 
-    return () => {
-      resizeObserver.disconnect();
-      chart.remove();
-    };
+      return () => {
+        resizeObserver.disconnect();
+        chart.remove();
+      };
+    } catch (error) {
+      console.error('Chart initialization error:', error);
+      return () => {};
+    }
   }, [symbol]);
 
   // Update chart on price ticks

@@ -11,22 +11,26 @@ export default function Landing({ onNavigate }: LandingProps) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
     let animId: number;
     let candles: { x: number; o: number; h: number; l: number; c: number; w: number }[] = [];
 
     const resize = () => {
+      if (!canvas || canvas.offsetWidth === 0 || canvas.offsetHeight === 0) return;
       canvas.width = canvas.offsetWidth * 2;
       canvas.height = canvas.offsetHeight * 2;
       ctx.scale(2, 2);
     };
     resize();
 
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
+    const w = canvas.offsetWidth || 800;
+    const h = canvas.offsetHeight || 400;
     const candleW = 8;
     const gap = 3;
-    const count = Math.floor(w / (candleW + gap));
+    const count = Math.max(10, Math.floor(w / (candleW + gap)));
 
     let basePrice = h * 0.5;
     for (let i = 0; i < count; i++) {

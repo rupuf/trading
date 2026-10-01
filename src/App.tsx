@@ -11,20 +11,22 @@ type Page = 'landing' | 'login' | 'signup' | 'forgot' | 'demo' | 'terminal' | 'p
 
 export default function App() {
   const [page, setPage] = useState<Page>('landing');
+  const [error, setError] = useState<string | null>(null);
   const { isAuthenticated, loadState, user } = useStore();
 
   // Check session on mount
   useEffect(() => {
-    const session = localStorage.getItem('nexus_session');
-    if (session) {
-      try {
+    try {
+      const session = localStorage.getItem('nexus_session');
+      if (session) {
         const userData = JSON.parse(session);
         useStore.setState({ user: userData, isAuthenticated: true });
         loadState();
         setPage('terminal');
-      } catch (e) {
-        localStorage.removeItem('nexus_session');
       }
+    } catch (e) {
+      console.error('Session load error:', e);
+      localStorage.removeItem('nexus_session');
     }
   }, []);
 
